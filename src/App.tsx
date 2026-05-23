@@ -339,7 +339,7 @@ function SelectField({ label, value, onChange, options, labels = {} }) {
 
 function Check({ label, checked, onChange }) {
   return (
-    <label className="check">
+    <label className={`check ${checked ? "selected" : ""}`}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
@@ -424,11 +424,16 @@ input, select { width: 100%; border: 1px solid rgba(255,255,255,.13); border-rad
 select option { color: #111; }
 input:focus, select:focus { border-color: rgba(255,255,255,.54); box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
 .checks { display: grid; gap: 10px; }
-.check { display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.08); padding: 10px 0; color: rgba(255,255,255,.74); font-size: 13px; }
-.check input { width: 16px; height: 16px; margin-top: 2px; accent-color: #fff; }
+.check { display: flex; align-items: flex-start; gap: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 11px 12px; color: rgba(255,255,255,.74); font-size: 13px; background: rgba(255,255,255,.025); cursor: pointer; transition: border-color .15s ease, background .15s ease, color .15s ease; }
+.check.selected { border-color: rgba(255,255,255,.32); background: rgba(255,255,255,.09); color: #fff; }
+.check input { appearance: none; width: 17px; height: 17px; margin-top: 1px; border: 1px solid rgba(255,255,255,.35); border-radius: 4px; background: transparent; display: grid; place-content: center; flex: 0 0 auto; }
+.check input::before { content: ""; width: 9px; height: 9px; transform: scale(0); transition: transform .12s ease-in-out; background: #fff; border-radius: 2px; }
+.check input:checked::before { transform: scale(1); }
+.check input:checked { border-color: #fff; }
 .split { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 pre { white-space: pre-wrap; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 16px; color: rgba(255,255,255,.82); line-height: 1.65; font-family: inherit; font-size: 13px; }
 .footerBrand { margin-top: 24px; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 18px; background: rgba(0,0,0,.34); color: rgba(255,255,255,.58); font-size: 12px; text-align: center; letter-spacing: .04em; }
 @media (max-width: 880px) { .wrap { width: min(100% - 24px, 980px); } .gridTwo { grid-template-columns: 1fr; } .tabs { grid-template-columns: repeat(2, 1fr); } .tabs button { border-bottom: 1px solid rgba(255,255,255,.08); } .fieldGrid.two { grid-template-columns: 1fr; } .heroPanel { padding: 26px; min-height: auto; } .hausMiddle span { width: 48px; } }
 `;
+
 
