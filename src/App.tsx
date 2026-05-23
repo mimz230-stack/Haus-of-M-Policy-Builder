@@ -21,6 +21,12 @@ export default function BeautyBusinessPolicyBuilder() {
     paymentTiming: "appointmentEnd",
     patchTestRequired: true,
     correctionWindow: 48,
+    parkingGraceMinutes: 10,
+    touchUpWindow: 8,
+    trainingDepositAmount: 200,
+    trainingRescheduleNotice: 7,
+    trainingPaymentDueDays: 7,
+    trainingCancellationNotice: 14,
     tone: "clear",
   });
 
@@ -35,6 +41,15 @@ export default function BeautyBusinessPolicyBuilder() {
     childrenGuests: true,
     patchTesting: true,
     correctionWork: true,
+    parkingPolicy: false,
+    healingPolicy: false,
+    touchUpPolicy: false,
+    trainingDeposit: false,
+    trainingPayment: false,
+    trainingRefunds: false,
+    trainingCancellation: false,
+    trainingRescheduling: false,
+    certificationPolicy: false,
     payment: true,
   });
 
@@ -53,18 +68,38 @@ export default function BeautyBusinessPolicyBuilder() {
   const updateSetting = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
   const updateIncluded = (key, value) => setIncluded((prev) => ({ ...prev, [key]: value }));
 
-  const toneIntro = useMemo(() => {
-    if (settings.tone === "soft") {
-      return `To keep appointments running smoothly and fairly for everyone, please read through the policies below before booking with ${settings.businessName}.`;
-    }
-    if (settings.tone === "firm") {
-      return `By booking with ${settings.businessName}, you agree to the policies below. These policies protect appointment time, business costs, and the quality of service provided.`;
-    }
-    if (settings.tone === "premium") {
-      return `At ${settings.businessName}, every appointment is reserved with care. These policies help protect the time, preparation, and professional standard behind each service.`;
-    }
-    return `Please read the policies below before booking with ${settings.businessName}. These help keep appointments clear, fair, and respectful of everyone’s time.`;
-  }, [settings.businessName, settings.tone]);
+  const toneContent = useMemo(() => {
+    const tones = {
+      soft: {
+        intro: `To keep appointments running smoothly and fairly for everyone, please read through the policies below before booking with ${settings.businessName}.`,
+        booking: `A booking fee of ${money(settings.bookingFeeAmount)} is required to secure your appointment. This helps protect appointment time and preparation.`,
+        cancellation: `Please give at least ${settings.cancellationNotice} hours’ notice if you need to cancel or move your appointment.`,
+        refund: `If you have any concerns with your service, please make contact kindly and as soon as possible so it can be reviewed fairly.`
+      },
+      clear: {
+        intro: `Please read the policies below before booking with ${settings.businessName}. These help keep appointments clear, fair, and respectful of everyone’s time.`,
+        booking: `A booking fee of ${money(settings.bookingFeeAmount)} is required to secure your appointment. Bookings are not confirmed until payment has been received.`,
+        cancellation: `Cancellations with less than ${settings.cancellationNotice} hours’ notice may result in the booking fee being retained.`,
+        refund: `Refunds are not offered for change of mind. Service concerns must be raised within the required timeframe.`
+      },
+      firm: {
+        intro: `By booking with ${settings.businessName}, you agree to the policies below. These policies protect appointment time, business costs, and the professional standards of the business.`,
+        booking: `Appointments without a paid booking fee will not be held or confirmed.`,
+        cancellation: `Late cancellations and no-shows may result in loss of booking fees and restricted future bookings.`,
+        refund: `All services are final. Concerns raised outside the required timeframe may be treated as a new appointment.`
+      },
+      premium: {
+        intro: `At ${settings.businessName}, each appointment is reserved intentionally to allow time, preparation, and a high standard of service. The policies below help protect that experience for every client.`,
+        booking: `A reservation fee of ${money(settings.bookingFeeAmount)} is required to reserve your appointment time.`,
+        cancellation: `Changes made within ${settings.cancellationNotice} hours may result in the reservation fee being retained.`,
+        refund: `Due to the customised nature of services, refunds are not offered for change of mind. Any concerns should be raised promptly so they can be professionally reviewed.`
+      }
+    };
+
+    return tones[settings.tone] || tones.clear;
+  }, [settings]);
+
+  const toneIntro = toneContent.intro;
 
   const policySections = useMemo(() => {
     const sections = [];
@@ -73,7 +108,7 @@ export default function BeautyBusinessPolicyBuilder() {
       const feeName = settings.bookingFeeType === "deposit" ? "booking fee/deposit" : "booking fee";
       sections.push({
         title: "Booking Fee",
-        text: `A ${feeName} of ${money(settings.bookingFeeAmount)} is required to secure your appointment. Your booking is not confirmed until this has been paid. This amount is applied toward your appointment unless stated otherwise in the cancellation or no-show policy.`,
+        text: `${toneContent.booking} This amount is applied toward your appointment unless stated otherwise in the cancellation or no-show policy.`,
         short: `A ${money(settings.bookingFeeAmount)} booking fee is required to secure your appointment.`,
       });
     }
@@ -81,7 +116,7 @@ export default function BeautyBusinessPolicyBuilder() {
     if (included.cancellation) {
       sections.push({
         title: "Cancellations",
-        text: `Please give at least ${settings.cancellationNotice} hours’ notice if you need to cancel your appointment. Cancellations made with less than ${settings.cancellationNotice} hours’ notice may result in your booking fee being kept or a new booking fee being required before rebooking.`,
+        text: `${toneContent.cancellation} A new booking fee may be required before rebooking.`,
         short: `Please give at least ${settings.cancellationNotice} hours’ notice for cancellations. Late cancellations may lose their booking fee.`,
       });
     }
@@ -111,8 +146,12 @@ export default function BeautyBusinessPolicyBuilder() {
 
     if (included.refunds) {
       const refundText = settings.refundPolicy === "serviceBased"
-        ? "Refunds are not offered for change of mind. If you have a genuine concern with your service, please make contact as soon as possible so it can be assessed fairly."
-        : "All sales and services are final. Concerns must be raised as soon as possible so they can be reviewed on a case-by-case basis.";
+        ? toneContent.refund
+        : settings.tone === "premium"
+          ? "Due to the customised nature of services and appointment preparation, all sales are considered final."
+          : settings.tone === "firm"
+            ? "All sales and services are final."
+            : "All sales are final unless otherwise stated by the business.";
       sections.push({ title: "Refunds", text: refundText, short: refundText });
     }
 
@@ -154,6 +193,78 @@ export default function BeautyBusinessPolicyBuilder() {
       });
     }
 
+    if (included.parkingPolicy) {
+      sections.push({
+        title: "Parking",
+        text: `Clients are responsible for allowing enough time for parking before their appointment. Late arrival due to parking may still fall under the late arrival policy. If you are more than ${settings.parkingGraceMinutes} minutes late, your appointment may need to be shortened, rescheduled, or cancelled.`,
+        short: `Please allow enough time for parking before your appointment. Late arrival due to parking may still fall under the late arrival policy.`,
+      });
+    }
+
+    if (included.healingPolicy) {
+      sections.push({
+        title: "Healing Results",
+        text: "Healed results vary between individuals based on skin type, lifestyle, aftercare, healing response, retention, and how the area is cared for during healing. Final healed results cannot be guaranteed. Following aftercare instructions is essential to support the best possible healed outcome.",
+        short: "Healed results vary between individuals and cannot be guaranteed. Please follow aftercare instructions carefully.",
+      });
+    }
+
+    if (included.touchUpPolicy) {
+      sections.push({
+        title: "Touch-Up Appointments",
+        text: `Touch-up appointments may be required once healing has taken place. Recommended touch-ups should be booked within ${settings.touchUpWindow} weeks unless otherwise advised. Touch-ups booked outside the recommended timeframe may be treated as a new appointment or priced differently.`,
+        short: `Touch-ups should be booked within ${settings.touchUpWindow} weeks unless otherwise advised. Late touch-ups may be priced differently.`,
+      });
+    }
+
+    if (included.trainingDeposit) {
+      sections.push({
+        title: "Training Deposits",
+        text: `A non-refundable training deposit of ${money(settings.trainingDepositAmount)} is required to secure your place. Your training place is not confirmed until this has been paid. Preparation, resources, scheduling, and student support begin once your place is booked.`,
+        short: `A non-refundable ${money(settings.trainingDepositAmount)} training deposit is required to secure your place.`,
+      });
+    }
+
+    if (included.trainingPayment) {
+      sections.push({
+        title: "Training Payments",
+        text: `Training must be paid in full at least ${settings.trainingPaymentDueDays} days before the course date unless otherwise agreed. Full payment must be completed before onboarding, training manuals, course resources, student support access, login details, kits, or training materials are provided. Failure to complete payment may result in your place being cancelled or postponed until payment has been received.`,
+        short: `Training must be paid in full before onboarding, resources, or training materials are provided.`,
+      });
+    }
+
+    if (included.trainingRefunds) {
+      sections.push({
+        title: "Training Refunds",
+        text: "Due to the preparation, resources, scheduling, digital access, kits, manuals, and educator time involved, training payments are non-refundable. If you are unable to attend, please make contact as soon as possible to discuss available options.",
+        short: "Training payments are non-refundable due to preparation and resources involved.",
+      });
+    }
+
+    if (included.trainingCancellation) {
+      sections.push({
+        title: "Training Cancellations",
+        text: `Training cancellations require at least ${settings.trainingCancellationNotice} days’ notice. Cancellations made within this timeframe may result in loss of deposits, payments made, access to resources, or eligibility to transfer to another training date.`,
+        short: `Training cancellations require at least ${settings.trainingCancellationNotice} days’ notice.`,
+      });
+    }
+
+    if (included.trainingRescheduling) {
+      sections.push({
+        title: "Training Rescheduling",
+        text: `Training dates may only be rescheduled with at least ${settings.trainingRescheduleNotice} days’ notice. Last-minute changes may result in loss of the deposit or require a new booking fee before transferring to another date. Training places are limited and dates are prepared in advance.`,
+        short: `Training rescheduling requires at least ${settings.trainingRescheduleNotice} days’ notice. Last-minute changes may affect your deposit.`,
+      });
+    }
+
+    if (included.certificationPolicy) {
+      sections.push({
+        title: "Certification",
+        text: "Certificates are issued upon successful completion of the training requirements set by the educator. Certification confirms course completion only and does not replace licensing, qualification requirements, insurance requirements, local regulations, or ongoing competency expectations where applicable. Students may be required to complete case studies, assessments, feedback, or resubmissions before certification is issued.",
+        short: "Certification confirms course completion only and is issued once training requirements are successfully completed.",
+      });
+    }
+
     if (included.payment) {
       const paymentText = settings.paymentTiming === "appointmentEnd"
         ? "Payment is due at the end of your appointment before leaving."
@@ -181,10 +292,24 @@ export default function BeautyBusinessPolicyBuilder() {
 
   const copyText = async (text) => {
     try {
-      await navigator.clipboard.writeText(text);
-      alert("Copied");
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+
+      alert("Copied to clipboard");
     } catch {
-      alert("Copy failed. Highlight the text and copy it manually.");
+      alert("Copy failed. Please highlight the text and copy it manually.");
     }
   };
 
@@ -254,6 +379,15 @@ export default function BeautyBusinessPolicyBuilder() {
                   childrenGuests: "Children & extra guests",
                   patchTesting: "Patch testing",
                   correctionWork: "Concerns & correction work",
+                  parkingPolicy: "Parking policy",
+                  healingPolicy: "PMU healing policy",
+                  touchUpPolicy: "PMU touch-up policy",
+                  trainingDeposit: "Training deposit policy",
+                  trainingPayment: "Training payment policy",
+                  trainingRefunds: "Training refund policy",
+                  trainingCancellation: "Training cancellation policy",
+                  trainingRescheduling: "Training rescheduling policy",
+                  certificationPolicy: "Certification policy",
                   payment: "Payment policy",
                 }).map(([key, label]) => (
                   <Check key={key} label={label} checked={included[key]} onChange={(v) => updateIncluded(key, v)} />
@@ -270,6 +404,12 @@ export default function BeautyBusinessPolicyBuilder() {
                 <NumberField label="Late arrival limit" value={settings.lateMinutes} onChange={(v) => updateSetting("lateMinutes", v)} note="How many minutes late before the appointment may be changed." />
                 <NumberField label="Reschedule limit" value={settings.rescheduleLimit} onChange={(v) => updateSetting("rescheduleLimit", v)} note="How many times a client can reschedule before a new fee may apply." />
                 <NumberField label="Concern window" value={settings.correctionWindow} onChange={(v) => updateSetting("correctionWindow", v)} note="How many hours clients have to raise a service concern." />
+                <NumberField label="Parking late limit" value={settings.parkingGraceMinutes} onChange={(v) => updateSetting("parkingGraceMinutes", v)} note="How many minutes late before parking-related lateness may affect the appointment." />
+                <NumberField label="PMU touch-up window" value={settings.touchUpWindow} onChange={(v) => updateSetting("touchUpWindow", v)} note="Recommended timeframe in weeks for PMU touch-up appointments." />
+                <NumberField label="Training deposit amount" value={settings.trainingDepositAmount} onChange={(v) => updateSetting("trainingDepositAmount", v)} note="Deposit amount required to secure training." />
+                <NumberField label="Training reschedule notice" value={settings.trainingRescheduleNotice} onChange={(v) => updateSetting("trainingRescheduleNotice", v)} note="How many days’ notice students need to reschedule training." />
+                <NumberField label="Training payment due" value={settings.trainingPaymentDueDays} onChange={(v) => updateSetting("trainingPaymentDueDays", v)} note="How many days before training full payment must be completed." />
+                <NumberField label="Training cancellation notice" value={settings.trainingCancellationNotice} onChange={(v) => updateSetting("trainingCancellationNotice", v)} note="How many days’ notice students need to cancel training." />
                 <SelectField label="No-show rule" value={settings.noShowRule} onChange={(v) => updateSetting("noShowRule", v)} options={["bookingFeeKept", "payBeforeRebook"]} />
                 <SelectField label="Refund style" value={settings.refundPolicy} onChange={(v) => updateSetting("refundPolicy", v)} options={["serviceBased", "finalSale"]} />
                 <SelectField label="Children policy" value={settings.childrenPolicy} onChange={(v) => updateSetting("childrenPolicy", v)} options={["noChildren", "askFirst"]} />
@@ -435,5 +575,6 @@ pre { white-space: pre-wrap; background: rgba(255,255,255,.055); border: 1px sol
 .footerBrand { margin-top: 24px; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 18px; background: rgba(0,0,0,.34); color: rgba(255,255,255,.58); font-size: 12px; text-align: center; letter-spacing: .04em; }
 @media (max-width: 880px) { .wrap { width: min(100% - 24px, 980px); } .gridTwo { grid-template-columns: 1fr; } .tabs { grid-template-columns: repeat(2, 1fr); } .tabs button { border-bottom: 1px solid rgba(255,255,255,.08); } .fieldGrid.two { grid-template-columns: 1fr; } .heroPanel { padding: 26px; min-height: auto; } .hausMiddle span { width: 48px; } }
 `;
+
 
 
